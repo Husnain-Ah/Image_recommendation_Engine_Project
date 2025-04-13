@@ -1,0 +1,38 @@
+{
+  "name": "image-recognition-engine-project",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "parcel index.html --port 8080",
+    "build": "parcel build index.html",
+    "server": "node server.js"
+  },
+  "dependencies": {
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow-models/mobilenet": "^2.1.1",
+    "@tensorflow/tfjs": "^4.22.0",
+    "axios": "^1.6.7",
+    "cors": "^2.8.5",
+    "csv": "^6.3.11",
+    "csv-parser": "^3.2.0",
+    "express": "^5.1.0",
+    "fuse.js": "^7.1.0",
+    "fuzzball": "^2.2.2",
+    "parser": "^0.1.4"
+  },
+  "devDependencies": {
+    "@parcel/optimizer-terser": "^2.x",
+    "@parcel/transformer-js": "^2.x",
+    "@parcel/transformer-typescript-tsc": "^2.x",
+    "buffer": "^6.0.3",
+    "os-browserify": "^0.3.0",
+    "parcel": "^2.x",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "typescript": "^5.x"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions"
+  ]
+}

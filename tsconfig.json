@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2017", // Target modern JS
+    "module": "ESNext",  // Use modern modules
+    "outDir": "./dist", // Output directory for compiled JS (Parcel handles this mostly)
+    "rootDir": "./src", // Source directory
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node" // Important for finding TFJS modules
+  },
+  "include": ["src/**/*", "server.js"], // Only compile files in src
+  "exclude": ["node_modules"]
+}

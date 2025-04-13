@@ -1,0 +1,6 @@
+/node_modules/*
+/dist/*
+.parcel-cache/*
+node_modules
+tiny-imagenet-200/
+annoy-env/
