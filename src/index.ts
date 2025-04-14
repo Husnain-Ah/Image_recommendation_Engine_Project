@@ -194,9 +194,25 @@ async function displayImageResults(imageUrls: string[]) {
       const embedding = embeddingModel.infer(tensor, true) as tf.Tensor;
 
       let score = 0;
-      if (userPreferenceVector) {
+
+      if (userPreferenceVector && currentImageEmbedding) {
+        // Hybrid scoring: combine user preferences and content-similarity, this is 70%user preference and 30% current image, user preference matters more
+        const similarityWithPreference = getCosineSimilarity(embedding, userPreferenceVector);
+        const similarityWithCurrentImage = getCosineSimilarity(embedding, currentImageEmbedding);
+
+        // Weighted hybrid score (tweak weights as needed), 
+        score = 0.7 * similarityWithPreference + 0.3 * similarityWithCurrentImage;
+      } else if (userPreferenceVector) {
+        // Use only user preference, 
         score = getCosineSimilarity(embedding, userPreferenceVector);
+      } else if (currentImageEmbedding) {
+        // Use only current image embedding, mainly used at start when there is no user preference determined by rating
+        score = getCosineSimilarity(embedding, currentImageEmbedding);
+      } else {
+        // Fallback (shouldnt hit)
+        score = 0;
       }
+
 
       const labelB = metadata[filename]?.label ?? "";
       const keywordScore = getKeywordScore(uploadedLabel, labelB);
@@ -209,7 +225,7 @@ async function displayImageResults(imageUrls: string[]) {
   }
 
     // top k filtering gives top 5 images after filtering by similarity
-  const SIMILARITY_THRESHOLD = 0.3;
+  const SIMILARITY_THRESHOLD = 0.1; //lower threshold to get more images
   const k = 5; // Number of top images to display
 
   const topImages = imageScores
