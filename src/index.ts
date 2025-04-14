@@ -140,6 +140,7 @@ function displayResults(predictions: any) {
 }
 
 const BASE_URL = "http://localhost:3000";
+const SIMILARITY_THRESHOLD = 0.3;
 
 async function displayImageResults(imageUrls: string[]) {
   imageGallery.innerHTML = "";
@@ -173,7 +174,9 @@ async function displayImageResults(imageUrls: string[]) {
         score = getCosineSimilarity(embedding, userPreferenceVector);
       }
 
-      imageScores.push({ url, score });
+      if (score >= SIMILARITY_THRESHOLD || !userPreferenceVector) {
+        imageScores.push({ url, score });
+      }
     } catch (err) {
       console.error(err);
     }
@@ -193,7 +196,7 @@ async function displayImageResults(imageUrls: string[]) {
   }
 
   imageGallery.style.display = "block";
-  console.log("Final image URLs:", imageUrls);
+  console.log("Final filtered image URLs:", imageScores.map(i => i.url));
 
   showRatingSection();
 }
@@ -231,6 +234,13 @@ document.getElementById('submit-rating')!.addEventListener('click', async () => 
   }
 });
 
+document.getElementById("reset-preferences")!.addEventListener("click", () => {
+  if (userPreferenceVector) {
+    userPreferenceVector.dispose();
+    userPreferenceVector = null;
+  }
+  alert("User preference vector has been reset.");
+});
 
 
 initializeBackend().then(() => {
