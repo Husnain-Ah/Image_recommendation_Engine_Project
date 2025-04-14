@@ -3,6 +3,17 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const fuzz = require('fuzzball');
+const axios = require('axios'); 
+
+async function getSemanticEmbedding(text) {
+  try {
+    const response = await axios.post('http://localhost:5001/embed', { text });
+    return response.data.embedding;
+  } catch (err) {
+    console.error('Embedding error:', err.message);
+    return null;
+  }
+}
 
 const app = express();
 const PORT = 3000;
@@ -63,32 +74,52 @@ function loadImages() {
   console.log(`Total images indexed: ${total}`);
 }
 
-app.post('/search-images', (req, res) => {
+const cosineSimilarity = (vecA, vecB) => {
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const normA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const normB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dotProduct / (normA * normB);
+};
+
+app.post('/search-images', async (req, res) => {
   const { keyword } = req.body;
   if (!keyword) return res.status(400).json({ error: 'No keyword provided' });
 
-  const uniqueLabelsInIndex = [...new Set(imageIndex.map(img => img.label))];
+  console.log(`Search query received: "${keyword}"`);
 
-  const bestMatch = fuzz.extract(keyword, uniqueLabelsInIndex, {
-    scorer: fuzz.token_set_ratio,
-    returnObjects: true,
-  });
+  const userEmbedding = await getSemanticEmbedding(keyword);
+  if (!userEmbedding) return res.status(500).json({ error: 'Failed to get embedding' });
 
-  console.log('Fuzzy search results:', bestMatch);
+  const uniqueLabels = [...new Set(imageIndex.map(img => img.label.toLowerCase()))];
 
-  const topLabel = bestMatch[0].choice;
-  console.log(`Searching for images similar to: "${keyword}" → "${topLabel}"`);
+  let bestMatch = null;
+  let highestSim = -1;
+
+  for (const label of uniqueLabels) {
+    const labelEmbedding = await getSemanticEmbedding(label);
+    const similarity = cosineSimilarity(userEmbedding, labelEmbedding);
+
+    if (similarity > highestSim) {
+      highestSim = similarity;
+      bestMatch = label;
+    }
+  }
+
+  if (!bestMatch) {
+    console.log(`No match found for "${keyword}"`);
+    return res.status(404).json({ error: `No match found for "${keyword}"` });
+  }
+
+  console.log(`Best match for "${keyword}": "${bestMatch}" with similarity: ${highestSim.toFixed(3)}`);
 
   const results = imageIndex
-    .filter(img => img.label === topLabel)
+    .filter(img => img.label.toLowerCase() === bestMatch)
     .slice(0, 10)
     .map(img => `tiny-imagenet-200${img.path}`);
 
-  if (results.length === 0) {
-    return res.status(404).json({ error: `No images found for label "${topLabel}"` });
-  }
+  console.log(`Found ${results.length} result(s) for "${keyword}"`);
 
-  res.json({ results });
+  res.json({ results, match: bestMatch, similarity: highestSim.toFixed(3) });
 });
 
 app.listen(PORT, () => {
