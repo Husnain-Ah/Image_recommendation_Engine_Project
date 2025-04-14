@@ -140,7 +140,6 @@ function displayResults(predictions: any) {
 }
 
 const BASE_URL = "http://localhost:3000";
-const SIMILARITY_THRESHOLD = 0.3;
 
 async function displayImageResults(imageUrls: string[]) {
   imageGallery.innerHTML = "";
@@ -180,10 +179,14 @@ async function displayImageResults(imageUrls: string[]) {
     }
   }
 
-  // top k filtering gives top 5 images
-  imageScores.sort((a, b) => b.score - a.score); //desc
-  const k = 5 
-  const topImages = imageScores.slice(0, k);
+  // top k filtering gives top 5 images after filtering by similarity
+  const SIMILARITY_THRESHOLD = 0.3;
+  const k = 5; // Number of top images to display
+
+  const topImages = imageScores
+  .filter(img => img.score >= SIMILARITY_THRESHOLD)
+  .sort((a, b) => b.score - a.score)
+  .slice(0, k);
 
   for (const { url, score } of topImages) {
     const img = document.createElement("img");
