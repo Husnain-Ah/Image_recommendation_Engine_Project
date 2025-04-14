@@ -74,6 +74,8 @@ app.post('/search-images', (req, res) => {
     returnObjects: true,
   });
 
+  console.log('Fuzzy search results:', bestMatch);
+
   const topLabel = bestMatch[0].choice;
   console.log(`Searching for images similar to: "${keyword}" → "${topLabel}"`);
 
