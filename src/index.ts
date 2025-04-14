@@ -41,6 +41,14 @@ async function loadModel() {
   }
 }
 
+function getCosineSimilarity(tensorA: tf.Tensor, tensorB: tf.Tensor): number {
+  const dotProduct = tf.sum(tf.mul(tensorA, tensorB));
+  const normA = tf.norm(tensorA);
+  const normB = tf.norm(tensorB);
+  const similarity = dotProduct.div(normA.mul(normB));
+  return similarity.dataSync()[0];
+}
+
 async function handleImageUpload(event: Event) {
   const target = event.target as HTMLInputElement
   if (!target.files || target.files.length === 0) {
@@ -133,7 +141,7 @@ function displayResults(predictions: any) {
 
 const BASE_URL = "http://localhost:3000";
 
-function displayImageResults(imageUrls: string[]) {
+async function displayImageResults(imageUrls: string[]) {
   imageGallery.innerHTML = "";
 
   if (!imageUrls || imageUrls.length === 0) {
@@ -141,21 +149,53 @@ function displayImageResults(imageUrls: string[]) {
     return;
   }
 
-  imageUrls.forEach((url) => {
+  const imageScores: { url: string; score: number }[] = [];
+
+  for (const url of imageUrls) {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = `${BASE_URL}/${url}`;
+
+    const loadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+    });
+
+    try {
+      const loadedImg = await loadPromise;
+      const tensor = tf.browser.fromPixels(loadedImg);
+
+      const embeddingModel = model as any;
+      const embedding = embeddingModel.infer(tensor, true) as tf.Tensor;
+
+      let score = 0;
+      if (userPreferenceVector) {
+        score = getCosineSimilarity(embedding, userPreferenceVector);
+      }
+
+      imageScores.push({ url, score });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  imageScores.sort((a, b) => b.score - a.score);
+
+  for (const { url, score } of imageScores) {
     const img = document.createElement("img");
-    img.src = `${BASE_URL}/${url}`; 
-    img.alt = "Related image";
+    img.src = `${BASE_URL}/${url}`;
+    img.alt = `Score: ${score.toFixed(2)}`;
     img.onerror = () => {
       console.error("Failed to load image:", img.src);
       img.style.display = "none";
     };
     imageGallery.appendChild(img);
-  });
+  }
 
-  imageGallery.style.display = "block"; 
+  imageGallery.style.display = "block";
   console.log("Final image URLs:", imageUrls);
 
-showRatingSection();
+  showRatingSection();
 }
 
 
