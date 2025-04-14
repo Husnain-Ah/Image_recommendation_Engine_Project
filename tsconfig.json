@@ -8,6 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "types": ["node", "@types/d3"], // Include Node and D3 types
     "moduleResolution": "node" // Important for finding TFJS modules
   },
   "include": ["src/**/*", "server.js"], // Only compile files in src

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local Image Recognition</title>
     <link rel="stylesheet" href="styles.css">
-
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -26,14 +26,19 @@
 
         <div id="image-search-results" class="search-results">
             <h3>Image Search Results:</h3>
+
+            <div id="search-loading" class="spinner" style="display: none;"></div>
+
             <div id="image-gallery" style="display: none;"></div> 
-            
+
+            <div id="score-chart" style="margin-top: 2em;"></div>
+
             <div id="rating-section" class="rating-section" style="display:none;">
                 <label for="rating-input">Rate the Image (1-10):</label>
                 <input type="number" id="rating-input" min="1" max="10" />
                 <button id="submit-rating" class="btn">Submit Rating</button>
             </div>
-            
+
             <button id="reset-preferences" class="btn btn-secondary">Reset Preferences</button>
         </div>
     </div>

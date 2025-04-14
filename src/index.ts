@@ -1,6 +1,7 @@
 import * as tf from "@tensorflow/tfjs"
 import * as mobilenet from "@tensorflow-models/mobilenet"
 import { searchLocalImages } from "./imageSearch";
+import * as d3 from 'd3';
 
 const imageInput = document.getElementById("image-input")! as HTMLInputElement
 const imageDisplay = document.getElementById("image-display")! as HTMLImageElement
@@ -165,8 +166,12 @@ function getKeywordScore(labelA: string, labelB: string): number {
 async function displayImageResults(imageUrls: string[]) {
   imageGallery.innerHTML = "";
 
+  const spinner = document.getElementById("search-loading")!;
+  spinner.style.display = "block"; 
+
   if (!imageUrls || imageUrls.length === 0) {
-    imageGallery.innerHTML = "<p>No related images found</p>";
+    imageGallery.innerHTML = "<p>No related images were found</p>";
+    spinner.style.display = "none"; 
     return;
   }
 
@@ -218,14 +223,17 @@ async function displayImageResults(imageUrls: string[]) {
       const keywordScore = getKeywordScore(uploadedLabel, labelB);
       const finalScore = 0.8 * score + 0.2 * keywordScore;
 
-      imageScores.push({ url, score: finalScore }); //calculate the score based on user preference vector (how similar the image is to user preferences)
+      imageScores.push({ url, score: finalScore });
     } catch (err) {
       console.error(err);
-    }
+    } 
   }
 
-    // top k filtering gives top 5 images after filtering by similarity
-  const SIMILARITY_THRESHOLD = 0.1; //lower threshold to get more images
+  spinner.style.display = "none";
+
+  const SIMILARITY_THRESHOLD = 0.1; //lower threshold to get more images, increase later to get more strict image filtering
+
+  // top k filtering gives top 5 images after filtering by similarity threshold
   const k = 5; // Number of top images to display
 
   const topImages = imageScores
@@ -248,6 +256,7 @@ async function displayImageResults(imageUrls: string[]) {
   console.log("Final filtered image URLs:", topImages.map(i => i.url));
 
   showRatingSection();
+  renderScoreChart(topImages);
 }
 
 
@@ -321,6 +330,79 @@ async function checkServerStatus() {
   }
 }
 
+function renderScoreChart(images: { url: string; score: number }[]) {
+  const container = d3.select("#score-chart");
+  container.selectAll("*").remove();
+
+  const width = 500;
+  const height = images.length * 40 + 60;
+
+  const svg = container.append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  const margin = { top: 40, right: 60, bottom: 50, left: 60 }; 
+  const chartWidth = width - margin.left - margin.right;
+  const chartHeight = height - margin.top - margin.bottom;
+
+  const x = d3.scaleLinear()
+    .domain([0, d3.max(images, d => d.score) || 0])
+    .range([0, chartWidth]);
+
+  const y = d3.scaleBand()
+    .domain(images.map(d => d.url))
+    .range([0, chartHeight])
+    .padding(0.1);
+
+  const chart = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  chart.selectAll("rect")
+    .data(images)
+    .enter()
+    .append("rect")
+    .attr("x", 0)
+    .attr("y", d => y(d.url) || 0)
+    .attr("width", d => x(d.score) || 0)
+    .attr("height", y.bandwidth() || 0)
+    .attr("fill", "#69b3a2");
+
+  chart.selectAll("image.thumbs")
+    .data(images)
+    .enter()
+    .append("image")
+    .attr("x", -50) 
+    .attr("y", d => y(d.url) || 0)
+    .attr("width", 40)
+    .attr("height", y.bandwidth() || 0)
+    .attr("href", d => `${BASE_URL}/${d.url}`);
+
+  chart.selectAll("text.scores")
+    .data(images)
+    .enter()
+    .append("text")
+    .attr("x", d => (x(d.score) || 0) + 5) 
+    .attr("y", d => (y(d.url) || 0) + (y.bandwidth() || 0) / 2)
+    .attr("dy", ".35em")
+    .attr("text-anchor", "start")
+    .text(d => d.score.toFixed(2))
+    .style("font-size", "12px")
+    .style("fill", "#333");
+
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", height - 10)
+    .style("text-anchor", "middle")
+    .text("Similarity Score");
+
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", 20)
+    .style("text-anchor", "middle")
+    .style("font-size", "16px")
+    .text("How similar these images are to your uploaded image");
+}
+  
 document.addEventListener("DOMContentLoaded", checkServerStatus)
 
 resultsDiv.innerText = "Select an image file to process."
