@@ -33,6 +33,11 @@ const VAL_IMAGES_PATH = path.join(DATASET_PATH, 'val', 'images');
 
 let imageIndex = []; 
 let labelMap = {};   
+let metadata = {};
+let invertedIndex = {};
+
+
+
 
 function loadLabelMap() {
   const filePath = path.join(DATASET_PATH, 'words.txt');
@@ -43,6 +48,29 @@ function loadLabelMap() {
   }
   console.log(`Loaded ${Object.keys(labelMap).length} labels`);
 }
+
+
+function loadMetadataAndBuildInvertedIndex() {
+  const metadataPath = path.join(__dirname, 'annoy_data', 'metadata.json');  // Update path as needed
+  if (!fs.existsSync(metadataPath)) {
+    console.error('metadata.json not found.');
+    return;
+  }
+
+  metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+
+  // Build inverted index
+  for (const item of metadata) {
+    const label = item.label.toLowerCase();
+    if (!invertedIndex[label]) {
+      invertedIndex[label] = [];
+    }
+    invertedIndex[label].push(item.filename);
+  }
+
+  console.log('Inverted index built with', Object.keys(invertedIndex).length, 'labels.');
+}
+
 
 function loadImages() {
   const wnids = fs.readFileSync(path.join(DATASET_PATH, 'wnids.txt'), 'utf-8').trim().split('\n');
@@ -85,12 +113,10 @@ app.post('/search-images', async (req, res) => {
   const { keyword } = req.body;
   if (!keyword) return res.status(400).json({ error: 'No keyword provided' });
 
-  console.log(`Search query received: "${keyword}"`);
-
   const userEmbedding = await getSemanticEmbedding(keyword);
   if (!userEmbedding) return res.status(500).json({ error: 'Failed to get embedding' });
 
-  const uniqueLabels = [...new Set(imageIndex.map(img => img.label.toLowerCase()))];
+  const uniqueLabels = Object.keys(invertedIndex);  
 
   let bestMatch = null;
   let highestSim = -1;
@@ -98,7 +124,6 @@ app.post('/search-images', async (req, res) => {
   for (const label of uniqueLabels) {
     const labelEmbedding = await getSemanticEmbedding(label);
     const similarity = cosineSimilarity(userEmbedding, labelEmbedding);
-
     if (similarity > highestSim) {
       highestSim = similarity;
       bestMatch = label;
@@ -106,24 +131,26 @@ app.post('/search-images', async (req, res) => {
   }
 
   if (!bestMatch) {
-    console.log(`No match found for "${keyword}"`);
     return res.status(404).json({ error: `No match found for "${keyword}"` });
   }
 
-  console.log(`Best match for "${keyword}": "${bestMatch}" with similarity: ${highestSim.toFixed(3)}`);
+  const matchingImages = invertedIndex[bestMatch] || [];
+  console.log(`Query: "${keyword}" matched label "${bestMatch}"`);
+  console.log(`Found ${matchingImages.length} matching images.`);
 
-  const results = imageIndex
-    .filter(img => img.label.toLowerCase() === bestMatch)
-    .slice(0, 10)
-    .map(img => `tiny-imagenet-200${img.path}`);
-
-  console.log(`Found ${results.length} result(s) for "${keyword}"`);
+  const results = matchingImages.slice(0, 10).map(filename => {
+    const imgMeta = metadata.find(meta => meta.filename === filename);
+    return `tiny-imagenet-200/train/${imgMeta.wnid}/images/${filename}`;
+  });
 
   res.json({ results, match: bestMatch, similarity: highestSim.toFixed(3) });
 });
+
+
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   loadLabelMap();
   loadImages();
+  loadMetadataAndBuildInvertedIndex();
 });
