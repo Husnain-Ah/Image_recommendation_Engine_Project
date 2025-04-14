@@ -266,7 +266,7 @@ async function checkServerStatus() {
     }
   } catch (error) {
     statusDiv.textContent =
-      "Server Status: Error - Cannot connect to server. Make sure it's running on http://localhost:3000"
+      "Server Status: Error - Cannot connect to server. Make sure it's running on http://localhost:3000 by running 'node server.js' in the terminal" 
     statusDiv.className = "status-error"
     console.error("Server connection error:", error)
   }

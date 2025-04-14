@@ -4,66 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local Image Recognition</title>
-    <style>
+    <link rel="stylesheet" href="styles.css">
 
-        #image-gallery img {
-            max-width: 150px;
-            margin: 10px;
-            border: 2px solid #ccc;
-        }
-
-        body { font-family: sans-serif; padding: 20px; }
-        #image-display { max-width: 400px; max-height: 400px; margin-top: 15px; border: 1px solid #ccc; }
-        #results { margin-top: 15px; font-weight: bold; }
-        #loading { color: blue; display: none; }
-        #image-gallery img {
-            width: 200px;
-            height: auto;
-            margin: 10px;
-        }
-        #server-status {
-            margin-top: 10px;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        .status-ok {
-            background-color: #dff0d8;
-            color: #3c763d;
-        }
-        .status-error {
-            background-color: #f2dede;
-            color: #a94442;
-        }
-        #rating-section {
-            margin-top: 15px;
-        }
-    </style>
 </head>
 <body>
-    <h1>Local Image Recognition with TensorFlow.js</h1>
+    <div class="container">
+        <h1>Local Image Recognition with TensorFlow.js</h1>
 
-    <div id="server-status">Checking server status...</div>
+        <div id="server-status" class="status-bar">Checking server status...</div>
 
-    <p>Select an image file:</p>
-    <input type="file" id="image-input" accept="image/*">
+        <div class="upload-section">
+            <p>Select an image file:</p>
+            <input type="file" id="image-input" accept="image/*">
+        </div>
 
-    <div id="loading">Loading Model and Classifying...</div>
+        <div id="loading" class="loading-indicator">Loading Model and Classifying...</div>
 
-    <img id="image-display" src="#" alt="Selected Image Preview" style="display: none;">
+        <img id="image-display" src="#" alt="Selected Image Preview" style="display: none;">
 
-    <div id="results"></div>
+        <div id="results" class="prediction-results"></div>
 
-    <div id="image-search-results">
-        <h3>Image Search Results:</h3>
-        <div id="image-gallery" style="display: none;"></div> 
-        
-        <div id="rating-section" style="display:none;">
-            <label for="rating-input">Rate the Image (1-10):</label>
-            <input type="number" id="rating-input" min="1" max="10" />
-            <button id="submit-rating">Submit Rating</button>
-          </div>
-          <br><br>
-          <button id="reset-preferences">Reset Preferences</button>
+        <div id="image-search-results" class="search-results">
+            <h3>Image Search Results:</h3>
+            <div id="image-gallery" style="display: none;"></div> 
+            
+            <div id="rating-section" class="rating-section" style="display:none;">
+                <label for="rating-input">Rate the Image (1-10):</label>
+                <input type="number" id="rating-input" min="1" max="10" />
+                <button id="submit-rating" class="btn">Submit Rating</button>
+            </div>
+            
+            <button id="reset-preferences" class="btn btn-secondary">Reset Preferences</button>
+        </div>
     </div>
 
     <script type="module" src="./src/index.ts"></script>
