@@ -23,6 +23,8 @@ app.use(express.json());
 
 app.use('/tiny-imagenet-200', express.static(path.join(__dirname, 'tiny-imagenet-200')));
 
+app.use('/annoy_data', express.static('annoy_data')); // Serve the annoy_data directory this is so i can access the metadata.json file in frontend
+
 app.get('/test', (req, res) => {
   res.status(200).send('Server is up and running!');
 });

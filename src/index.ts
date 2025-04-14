@@ -10,7 +10,7 @@ const imageGallery = document.getElementById("image-gallery")!
 
 let userPreferenceVector: tf.Tensor | null = null;
 let currentImageEmbedding: tf.Tensor | null = null;
-
+let predictions: any[] = [];
 
 let model: mobilenet.MobileNet | null = null
 
@@ -97,7 +97,7 @@ async function handleImageUpload(event: Event) {
       }
 
       console.log("Classifying image...")
-      const predictions = await model.classify(tensor)
+      predictions = await model.classify(tensor)
       console.log("Classification results:", predictions)
       displayResults(predictions)
 
@@ -140,6 +140,27 @@ function displayResults(predictions: any) {
 }
 
 const BASE_URL = "http://localhost:3000";
+let metadata: Record<string, { label: string }> = {};
+
+async function loadMetadata() {
+  if (Object.keys(metadata).length === 0) {
+    const res = await fetch(`${BASE_URL}/annoy_data/metadata.json`);
+    const json = await res.json();
+    for (const item of json) {
+      metadata[item.filename] = {
+        label: item.label.toLowerCase().trim()
+      };
+    }
+  }
+}
+
+function getKeywordScore(labelA: string, labelB: string): number {
+  if (!labelA || !labelB) return 0;
+  const aWords = labelA.split(/[ ,]+/);
+  const bWords = labelB.split(/[ ,]+/);
+  const shared = aWords.filter(word => bWords.includes(word));
+  return shared.length > 0 ? 1 : 0;
+}
 
 async function displayImageResults(imageUrls: string[]) {
   imageGallery.innerHTML = "";
@@ -149,9 +170,13 @@ async function displayImageResults(imageUrls: string[]) {
     return;
   }
 
+  await loadMetadata();
+
   const imageScores: { url: string; score: number }[] = [];
+  const uploadedLabel = predictions[0]?.className.toLowerCase().trim();
 
   for (const url of imageUrls) {
+    const filename = url.split("/").pop()!;
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = `${BASE_URL}/${url}`;
@@ -173,20 +198,24 @@ async function displayImageResults(imageUrls: string[]) {
         score = getCosineSimilarity(embedding, userPreferenceVector);
       }
 
-      imageScores.push({ url, score }); //calculate the score based on user preference vector (how similar the image is to user preferences)
+      const labelB = metadata[filename]?.label ?? "";
+      const keywordScore = getKeywordScore(uploadedLabel, labelB);
+      const finalScore = 0.8 * score + 0.2 * keywordScore;
+
+      imageScores.push({ url, score: finalScore }); //calculate the score based on user preference vector (how similar the image is to user preferences)
     } catch (err) {
       console.error(err);
     }
   }
 
-  // top k filtering gives top 5 images after filtering by similarity
+    // top k filtering gives top 5 images after filtering by similarity
   const SIMILARITY_THRESHOLD = 0.3;
   const k = 5; // Number of top images to display
 
   const topImages = imageScores
-  .filter(img => img.score >= SIMILARITY_THRESHOLD)
-  .sort((a, b) => b.score - a.score)
-  .slice(0, k);
+    .filter(img => img.score >= SIMILARITY_THRESHOLD)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k);
 
   for (const { url, score } of topImages) {
     const img = document.createElement("img");
@@ -270,7 +299,7 @@ async function checkServerStatus() {
     }
   } catch (error) {
     statusDiv.textContent =
-      "Server Status: Error - Cannot connect to server. Make sure it's running on http://localhost:3000 by running 'node server.js' in the terminal" 
+    "Server Status: Error - Cannot connect to server. Make sure it's running on http://localhost:3000 by running 'node server.js' in the terminal" 
     statusDiv.className = "status-error"
     console.error("Server connection error:", error)
   }
