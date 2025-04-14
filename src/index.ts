@@ -174,17 +174,18 @@ async function displayImageResults(imageUrls: string[]) {
         score = getCosineSimilarity(embedding, userPreferenceVector);
       }
 
-      if (score >= SIMILARITY_THRESHOLD || !userPreferenceVector) {
-        imageScores.push({ url, score });
-      }
+      imageScores.push({ url, score }); //calculate the score based on user preference vector (how similar the image is to user preferences)
     } catch (err) {
       console.error(err);
     }
   }
 
-  imageScores.sort((a, b) => b.score - a.score);
+  // top k filtering gives top 5 images
+  imageScores.sort((a, b) => b.score - a.score); //desc
+  const k = 5 
+  const topImages = imageScores.slice(0, k);
 
-  for (const { url, score } of imageScores) {
+  for (const { url, score } of topImages) {
     const img = document.createElement("img");
     img.src = `${BASE_URL}/${url}`;
     img.alt = `Score: ${score.toFixed(2)}`;
@@ -196,7 +197,7 @@ async function displayImageResults(imageUrls: string[]) {
   }
 
   imageGallery.style.display = "block";
-  console.log("Final filtered image URLs:", imageScores.map(i => i.url));
+  console.log("Final filtered image URLs:", topImages.map(i => i.url));
 
   showRatingSection();
 }
