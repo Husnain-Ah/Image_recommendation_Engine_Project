@@ -8,6 +8,10 @@ const resultsDiv = document.getElementById("results")!
 const loadingDiv = document.getElementById("loading")!
 const imageGallery = document.getElementById("image-gallery")!
 
+let userPreferenceVector: tf.Tensor | null = null;
+let currentImageEmbedding: tf.Tensor | null = null;
+
+
 let model: mobilenet.MobileNet | null = null
 
 async function initializeBackend() {
@@ -94,10 +98,13 @@ async function handleImageUpload(event: Event) {
         console.log("Top prediction:", topPrediction)
         console.log("Searching for images related to:", topPrediction)
 
+        const embeddingModel = model as any;
+        currentImageEmbedding = embeddingModel.infer(tensor, true) as tf.Tensor;
+
+
         imageGallery.innerHTML = "<p>Searching for related images...</p>"
 
         const imageUrls = await searchLocalImages(topPrediction);
-
         console.log("Received image URLs:", imageUrls)
         displayImageResults(imageUrls)
       }
@@ -159,32 +166,31 @@ function showRatingSection() {
   }
 }
 
-document.getElementById('submit-rating')!.addEventListener('click', () => {
+document.getElementById('submit-rating')!.addEventListener('click', async () => {
   const rating = parseInt((document.getElementById('rating-input') as HTMLInputElement).value);
 
   if (rating >= 1 && rating <= 10) {
     console.log('User rating:', rating);
 
-    fetch('/submit-rating', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ rating }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log('Rating submitted successfully:', data);
-        alert('Thank you for your rating!');
-      })
-      .catch((error) => {
-        console.error('Error submitting rating:', error);
-        alert('Error submitting your rating. Please try again.');
-      });
+    if (currentImageEmbedding) {
+      const weight = rating / 10;
+      const scaledEmbedding = currentImageEmbedding.mul(tf.scalar(weight));
+
+      if (userPreferenceVector) {
+        userPreferenceVector = tf.add(userPreferenceVector, scaledEmbedding);
+      } else {
+        userPreferenceVector = scaledEmbedding.clone();
+      }
+
+      console.log("Updated user preference vector:", userPreferenceVector.arraySync());
+    }
+
+    alert('Thank you for your rating!');
   } else {
     alert('Please enter a rating between 1 and 10');
   }
 });
+
 
 
 initializeBackend().then(() => {
