@@ -3,68 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local Image Recognition</title>
+
     <link rel="stylesheet" href="styles.css">
+
     <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Local Image Recognition with TensorFlow.js</h1>
+        <header>
+            <h1>Local Image Recognition System</h1>
+            <p class="subtitle">Using TensorFlow.js and Tiny Imagenet 200</p>
+        </header>
 
-        <div id="server-status" class="status-bar">Checking server status...</div>
-
-        <div class="upload-section">
-            <p>Select an image file:</p>
-            <input type="file" id="image-input" accept="image/*">
+        <div id="server-status" class="status-bar">
+            <span class="status-icon"></span>
+            <span class="status-text">Checking server status...</span>
         </div>
 
-        <div id="loading" class="loading-indicator">Loading Model and Classifying...</div>
+        <div class="card upload-section">
+            <h2>Upload Image</h2>
+            <p>Select an image file to analyze:</p>
+            <div class="upload-controls">
+                <label for="image-input" class="file-input-label">
+                    <span class="file-input-text">Choose File</span>
+                    <input type="file" id="image-input" accept="image/*">
+                </label>
+            </div>
+            <p class="file-name" id="file-name">No file chosen</p>
+        </div>
 
-        <img id="image-display" src="#" alt="Selected Image Preview" style="display: none;">
+        <div id="loading" class="loading-indicator">
+            <div class="spinner"></div>
+            <p>Loading Model and Classifying...</p>
+        </div>
 
-        <div id="results" class="prediction-results"></div>
+        <div class="card preview-card" id="preview-card" style="display: none;">
+            <h2>Image Preview</h2>
+            <div class="image-container">
+                <img id="image-display" src="#" alt="Selected Image Preview">
+            </div>
+        </div>
+
+        <div id="results" class="predictions" style="display: none;">
+            <h2>Prediction Results</h2>
+            <div id="results-content"></div>
+        </div>
 
         <div id="image-search-results" class="search-results">
-            <h3>Image Search Results:</h3>
+            <div class="card">
+                <h2>Image Search Results</h2>
 
-            <div id="search-loading" class="spinner" style="display: none;"></div>
+                <div id="search-loading" class="spinner" style="display: none;"></div>
 
-            <div id="image-gallery" style="display: none;"></div> 
+                <div id="image-gallery" style="display: none;"></div> 
+
+                <div id="rating-section" class="rating-section" style="display:none;">
+                    <h3>Rate the Image</h3>
+                    <div class="rating-container">
+                        <label for="rating-input">Score (1-10):</label>
+                        <input type="number" id="rating-input" min="1" max="10" value="5" />
+                        <button id="submit-rating" class="btn btn-primary">Submit Rating</button>
+                    </div>
+                </div>
+
+                <button id="reset-preferences" class="btn btn-secondary">Reset Preferences</button>
 
 
-            <div id="rating-section" class="rating-section" style="display:none;">
-                <label for="rating-input">Rate the Image (1-10):</label>
-                <input type="number" id="rating-input" min="1" max="10" />
-                <button id="submit-rating" class="btn">Submit Rating</button>
-            </div>
-
-            <button id="reset-preferences" class="btn btn-secondary">Reset Preferences</button>
-
-            
-
-            <div style="margin-top: 10px;">
-
-                <h3>Bar chart of similarity:</h3>
-
-            </div>
-            <div id="score-chart" style="margin-top: 2em;">
-            </div>
-
-            <div style="margin-top: 10px;">
-
-                <h3>Force Graph of Image Similarities:</h3>
-                <span style="color: green;">●</span> Same label as query (limited by dataset) &nbsp;
-                <span style="color: RED;">●</span> Different label (but similar)
 
             </div>
-            
-            <div id="force-graph">
+
+            <div class="card chart-card">
+
+                <h2>Similarity Analysis Bar Chart</h2>
+                <div id="score-chart" class="chart-container"></div>
+
             </div>
 
-            
+            <div class="card graph-card">
+                <h2>Force Graph of Image Similarities</h2>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="legend-color same-label"></span>
+                        <span>Same label as query (limited by dataset)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color different-label"></span>
+                        <span>Different label (but similar)</span>
+                    </div>
+                </div>
+                <div id="force-graph" class="graph-container"></div>
+            </div>
+
+
         </div>
     </div>
 
     <script type="module" src="./src/index.ts"></script>
+    <script>
+        document.getElementById('image-input').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file chosen';
+            document.getElementById('file-name').textContent = fileName;
+            
+            if (e.target.files[0]) {
+                document.getElementById('preview-card').style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>

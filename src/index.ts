@@ -126,12 +126,13 @@ function displayResults(predictions: any) {
     return
   }
 
-  let resultText = "Predictions:<br><ul>"
+  let resultText = "Predictions:<br><ul>";
   predictions.forEach((prediction: { className: string; probability: number }) => {
-    resultText += `<li>${prediction.className}: ${(prediction.probability * 100).toFixed(2)}%</li>`
-  })
-  resultText += "</ul>"
-  resultsDiv.innerHTML = resultText
+    resultText += `<li><span class="prediction-label">${prediction.className}</span><span class="prediction-value">${(prediction.probability * 100).toFixed(2)}%</span></li>`;
+  });
+  resultText += "</ul>";
+  resultsDiv.innerHTML = resultText;
+  resultsDiv.style.display = "block";
 }
 
 const BASE_URL = "http://localhost:3000";
@@ -228,7 +229,7 @@ async function displayImageResults(imageUrls: string[]) {
   const SIMILARITY_THRESHOLD = 0.1; //lower threshold to get more images, increase later to get more strict image filtering
 
   // top k filtering gives top 5 images after filtering by similarity threshold
-  const k = 5; // Number of top images to display
+  const k = 6 // Number of top images to display
   const MAX_PER_LABEL = 15
   const labelGroups: Record<string, typeof imageScores> = {};
 
@@ -263,7 +264,6 @@ async function displayImageResults(imageUrls: string[]) {
   renderScoreChart(topImages);
   renderForceGraph(imageDisplay.src, forceImages);
 }
-
 
 function showRatingSection() {
   const ratingSection = document.getElementById('rating-section');
@@ -335,10 +335,8 @@ async function checkServerStatus() {
   }
 }
 
-  
 document.addEventListener("DOMContentLoaded", checkServerStatus)
 
 resultsDiv.innerText = "Select an image file to process."
-
 
 export { metadata, predictions };
