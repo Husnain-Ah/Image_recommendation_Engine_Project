@@ -4,8 +4,4 @@
 node_modules
 tiny-imagenet-200/*
 annoy-env/*
-/annoy_data/*
-annoy_data
-annoy_data/metadata.json
-annoy_data/image_annoy_index.ann
-annoy_data/annoy_neighbors.json
+annoy_data/*
