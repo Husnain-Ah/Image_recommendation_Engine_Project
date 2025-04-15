@@ -244,11 +244,21 @@ async function displayImageResults(imageUrls: string[]) {
 
   // top k filtering gives top 5 images after filtering by similarity threshold
   const k = 5; // Number of top images to display
+  const MAX_PER_LABEL = 15
+  const labelGroups: Record<string, typeof imageScores> = {};
 
-  const topImages = imageScores
-    .filter(img => img.score >= SIMILARITY_THRESHOLD)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, k);
+  for (let img of imageScores.sort((a, b) => b.score - a.score)) {
+    const filename = img.url.split("/").pop()!;
+    const label = metadata[filename]?.label ?? "Unknown";
+
+    if (!labelGroups[label]) labelGroups[label] = [];
+    if (labelGroups[label].length < MAX_PER_LABEL) {
+      labelGroups[label].push(img);
+    }
+  }
+  
+  const topImages = Object.values(labelGroups).flat().slice(0, k); // total top-5 to recommend
+  const forceImages = Object.values(labelGroups).flat().slice(0, MAX_PER_LABEL); // to show in force graph
 
   for (const { url, score } of topImages) {
     const img = document.createElement("img");
@@ -266,7 +276,7 @@ async function displayImageResults(imageUrls: string[]) {
 
   showRatingSection();
   renderScoreChart(topImages);
-  renderForceGraph(imageDisplay.src, topImages);
+  renderForceGraph(imageDisplay.src, forceImages);
 }
 
 
@@ -342,7 +352,7 @@ async function checkServerStatus() {
 
 function renderForceGraph(uploadedImageUrl: string, topImages: { url: string; score: number }[]) {
   const container = d3.select("#force-graph");
-  container.selectAll("*").remove(); // Clear previous graph
+  container.selectAll("*").remove(); 
 
   const width = 600;
   const height = 400;
@@ -377,7 +387,7 @@ function renderForceGraph(uploadedImageUrl: string, topImages: { url: string; sc
     .append("text")
     .attr("class", "node-label")
     .attr("text-anchor", "middle")
-    .attr("dy", 55) 
+    .attr("dy", 5) 
     .style("font-size", "10px")
     .text(d => d.label || "");
 
@@ -390,7 +400,11 @@ function renderForceGraph(uploadedImageUrl: string, topImages: { url: string; sc
     .data(links)
     .enter()
     .append("line")
-    .attr("stroke", "#aaa")
+    .attr("stroke", d => {
+      const targetNode = nodes.find(n => n.id === d.target);
+      if (targetNode?.label === nodes[0].label) return "green"; 
+      return "red"; 
+    })
     .attr("stroke-width", d => 2 * d.weight);
 
     const node = svg.selectAll("image")
@@ -401,6 +415,12 @@ function renderForceGraph(uploadedImageUrl: string, topImages: { url: string; sc
       .attr("width", 40)
       .attr("height", 40)
       .attr("class", "force-node")
+      .style("stroke", d => {
+        if (d.isMain) return "black";
+        if (d.label === nodes[0].label) return "green";
+        return "blue";
+      })
+      .style("stroke-width", 3)
       .call(
         d3.drag<SVGImageElement, ImageNode>()
           .on("start", dragstarted)
