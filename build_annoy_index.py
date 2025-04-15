@@ -11,7 +11,7 @@ WORDS_FILE = os.path.join(BASE_DIR, 'words.txt')
 
 FEATURE_DIM = 1280
 TOP_K = 10
-MAX_IMAGES_PER_CLASS = 500 # only load 5 pics for now to cut dowen load time in developmnet (change if load times are too long)
+MAX_IMAGES_PER_CLASS = 50 # only load 50 pics for now to cut dowen load time in developmnet (change if load times are too long)
 
 
 label_map = {}

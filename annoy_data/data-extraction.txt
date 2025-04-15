@@ -1,0 +1,1 @@
+run python build_annoy_index.py to get the metadata and image feature extraction for recommendations in this file
