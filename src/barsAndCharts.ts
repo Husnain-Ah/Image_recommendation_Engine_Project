@@ -65,11 +65,12 @@ export function renderForceGraph(uploadedImageUrl: string, topImages: { url: str
     .data(links)
     .enter()
     .append("line")
-    .attr("stroke", d => {
-      const targetNode = nodes.find(n => n.id === d.target);
-      if (targetNode?.label === nodes[0].label) return "green"; 
-      return "red"; 
-    })
+    .attr("stroke", (d: { target: string | { id: string } }) => {
+      const targetId = typeof d.target === "string" ? d.target : d.target.id;
+      const targetNode = nodes.find(n => n.id === targetId);
+      if (targetNode?.label === nodes[0].label) return "green";
+      return "red";
+    })    
     .attr("stroke-width", d => 2 * d.weight);
 
     const node = svg.selectAll("image")
