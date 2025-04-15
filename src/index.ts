@@ -27,11 +27,11 @@ async function initializeBackend() {
 }
 
 async function loadModel() {
-  console.log("Loading MobileNet model...")
+  console.log("Loading MobileNetV2 model...")
   loadingDiv.style.display = "block"
 
   try {
-    model = await mobilenet.load()
+    model = await mobilenet.load({ version: 2, alpha: 1.0 }); //  MobileNetV2 too match annoy feature extraction
     console.log("Model loaded successfully.")
     resultsDiv.innerText = "Model loaded. Ready for image selection."
   } catch (error) {
