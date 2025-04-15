@@ -137,3 +137,10 @@ h1 {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+.node-label {
+    font-family: sans-serif;
+    fill: #333;
+    pointer-events: none;
+  }
+  

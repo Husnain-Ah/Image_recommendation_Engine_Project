@@ -15,6 +15,15 @@ let predictions: any[] = [];
 
 let model: mobilenet.MobileNet | null = null
 
+//used for forcegraph
+type ImageNode = {
+  id: string;
+  url: string;
+  label?: string;
+  score?: number;
+  isMain?: boolean;
+};
+
 async function initializeBackend() {
   try {
     await tf.setBackend("webgl")
@@ -257,6 +266,7 @@ async function displayImageResults(imageUrls: string[]) {
 
   showRatingSection();
   renderScoreChart(topImages);
+  renderForceGraph(imageDisplay.src, topImages);
 }
 
 
@@ -327,6 +337,108 @@ async function checkServerStatus() {
     "Server Status: Error - Cannot connect to server. Make sure it's running on http://localhost:3000 by running 'node server.js' in the terminal" 
     statusDiv.className = "status-error"
     console.error("Server connection error:", error)
+  }
+}
+
+function renderForceGraph(uploadedImageUrl: string, topImages: { url: string; score: number }[]) {
+  const container = d3.select("#force-graph");
+  container.selectAll("*").remove(); // Clear previous graph
+
+  const width = 600;
+  const height = 400;
+
+  const nodes: ImageNode[] = [
+    { id: "uploaded", url: uploadedImageUrl, isMain: true, label: predictions[0]?.className },
+    ...topImages.map((img, i) => {
+      const filename = img.url.split("/").pop()!;
+      const label = metadata[filename]?.label ?? "Unknown";
+      return {
+        id: `img${i}`,
+        url: `${BASE_URL}/${img.url}`,
+        score: img.score,
+        label
+      };
+    })
+  ];
+  
+  const links = topImages.map((img, i) => ({
+    source: "uploaded",
+    target: `img${i}`,
+    weight: img.score
+  }));
+
+  const svg = container.append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  const labels = svg.selectAll("text")
+    .data(nodes)
+    .enter()
+    .append("text")
+    .attr("class", "node-label")
+    .attr("text-anchor", "middle")
+    .attr("dy", 55) 
+    .style("font-size", "10px")
+    .text(d => d.label || "");
+
+  const simulation = d3.forceSimulation(nodes as any)
+    .force("link", d3.forceLink(links).id((d: any) => d.id).distance(d => 250 * (1 - (d as any).weight)))
+    .force("charge", d3.forceManyBody().strength(-200))
+    .force("center", d3.forceCenter(width / 2, height / 2));
+
+  const link = svg.selectAll("line")
+    .data(links)
+    .enter()
+    .append("line")
+    .attr("stroke", "#aaa")
+    .attr("stroke-width", d => 2 * d.weight);
+
+    const node = svg.selectAll("image")
+      .data(nodes)
+      .enter()
+      .append("image")
+      .attr("xlink:href", d => d.url)
+      .attr("width", 40)
+      .attr("height", 40)
+      .attr("class", "force-node")
+      .call(
+        d3.drag<SVGImageElement, ImageNode>()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended)
+      );
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => (d.source as any).x)
+          .attr("y1", d => (d.source as any).y)
+          .attr("x2", d => (d.target as any).x)
+          .attr("y2", d => (d.target as any).y);
+      
+        node
+          .attr("x", (d: any) => d.x - 20)
+          .attr("y", (d: any) => d.y - 20);
+      
+        labels
+          .attr("x", (d: any) => d.x)
+          .attr("y", (d: any) => d.y + 30); 
+      });
+
+  function dragstarted(event: any, d: any) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+
+  function dragged(event: any, d: any) {
+    d.fx = event.x;
+    d.fy = event.y;
+  }
+
+  function dragended(event: any, d: any) {
+    if (!event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
   }
 }
 
