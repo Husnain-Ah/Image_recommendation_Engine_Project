@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs"
 import * as mobilenet from "@tensorflow-models/mobilenet"
 import { searchLocalImages } from "./imageSearch";
-import { renderScoreChart } from "./barsAndCharts";
+import { renderUserVectorChart } from "./barsAndCharts";
 import { renderForceGraph } from "./barsAndCharts";
 import { getCosineSimilarity } from "./functions";
 
@@ -266,7 +266,6 @@ async function displayImageResults(imageUrls: string[]) {
   console.log("Final filtered image URLs:", topImages.map(i => i.url));
 
   showRatingSection();
-  renderScoreChart(topImages);
   renderForceGraph(imageDisplay.src, forceImages);
 }
 
@@ -296,6 +295,10 @@ document.getElementById('submit-rating')!.addEventListener('click', async () => 
 
       console.log("Updated user preference vector:", userPreferenceVector.arraySync());
     }
+    if (userPreferenceVector) {
+      renderUserVectorChart(userPreferenceVector);
+    }
+    
 
     alert('Thank you for your rating!');
   } else {

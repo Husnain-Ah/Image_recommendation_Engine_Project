@@ -1,4 +1,5 @@
 import * as d3 from 'd3';
+import * as tf from "@tensorflow/tfjs"
 
 import { predictions, metadata } from './index';
 
@@ -13,6 +14,10 @@ type ImageNode = {
   isMain?: boolean;
 };
 
+type BarChartData = {
+  index: number;
+  value: number;
+};
 
 
 export function renderForceGraph(uploadedImageUrl: string, topImages: { url: string; score: number }[]) {
@@ -128,75 +133,105 @@ export function renderForceGraph(uploadedImageUrl: string, topImages: { url: str
   }
 }
 
-export function renderScoreChart(images: { url: string; score: number }[]) {
-  const container = d3.select("#score-chart");
+export function renderUserVectorChart(userVector: tf.Tensor) {
+  const container = d3.select("#user-vector-chart");
   container.selectAll("*").remove();
 
+  if (!userVector) { //doesnt work
+    container.append("p")
+      .text("No preference data yet. Start rating some images!")
+      .style("color", "#888")
+      .style("font-style", "italic")
+      .style("text-align", "center")
+      .style("padding", "1rem");
+    return;
+  }
+
+  const vectorData: BarChartData[] = Array.from(userVector.dataSync()).map((value, index) => ({
+    index,
+    value
+  }));
+
+  // Top 10 dimensions with highest weights
+  const topDims = vectorData.sort((a, b) => b.value - a.value).slice(0, 10);
+
   const width = 500;
-  const height = images.length * 40 + 60;
+  const height = 300;
+  const margin = { top: 40, right: 20, bottom: 50, left: 60 };
+  const chartWidth = width - margin.left - margin.right;
+  const chartHeight = height - margin.top - margin.bottom;
 
   const svg = container.append("svg")
     .attr("width", width)
     .attr("height", height);
 
-  const margin = { top: 40, right: 60, bottom: 50, left: 60 }; 
-  const chartWidth = width - margin.left - margin.right;
-  const chartHeight = height - margin.top - margin.bottom;
-
-  const x = d3.scaleLinear()
-    .domain([0, d3.max(images, d => d.score) || 0])
-    .range([0, chartWidth]);
-
-  const y = d3.scaleBand()
-    .domain(images.map(d => d.url))
-    .range([0, chartHeight])
+  const x = d3.scaleBand()
+    .domain(topDims.map(d => d.index.toString()))
+    .range([0, chartWidth])
     .padding(0.1);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(topDims, d => d.value)!])
+    .nice()
+    .range([chartHeight, 0]);
 
   const chart = svg.append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
   chart.selectAll("rect")
-    .data(images)
+    .data(topDims)
     .enter()
     .append("rect")
-    .attr("x", 0)
-    .attr("y", d => y(d.url) || 0)
-    .attr("width", d => x(d.score) || 0)
-    .attr("height", y.bandwidth() || 0)
-    .attr("fill", "#69b3a2");
+    .attr("x", d => x(d.index.toString())!)
+    .attr("y", d => y(d.value))
+    .attr("width", x.bandwidth())
+    .attr("height", d => chartHeight - y(d.value))
+    .attr("fill", "#3f37c9")
+    .append("title")
+    .text(d => `Dimension ${d.index}: Weight = ${d.value.toFixed(2)}`);
 
-  chart.selectAll("image.thumbs")
-    .data(images)
-    .enter()
-    .append("image")
-    .attr("x", -50) 
-    .attr("y", d => y(d.url) || 0)
-    .attr("width", 40)
-    .attr("height", y.bandwidth() || 0)
-    .attr("href", d => `${BASE_URL}/${d.url}`);
-
-  chart.selectAll("text.scores")
-    .data(images)
+  // Labels for the bars
+  chart.selectAll("text")
+    .data(topDims)
     .enter()
     .append("text")
-    .attr("x", d => (x(d.score) || 0) + 5) 
-    .attr("y", d => (y(d.url) || 0) + (y.bandwidth() || 0) / 2)
-    .attr("dy", ".35em")
-    .attr("text-anchor", "start")
-    .text(d => d.score.toFixed(2))
-    .style("font-size", "12px")
-    .style("fill", "#333");
-
-  svg.append("text")
-    .attr("x", width / 2)
-    .attr("y", height - 10)
-    .style("text-anchor", "middle")
-    .text("Similarity Score");
+    .attr("x", d => x(d.index.toString())! + x.bandwidth() / 2)
+    .attr("y", d => y(d.value) - 5)
+    .attr("text-anchor", "middle")
+    .text(d => d.value.toFixed(2))
+    .style("font-size", "12px");
 
   svg.append("text")
     .attr("x", width / 2)
     .attr("y", 20)
     .style("text-anchor", "middle")
     .style("font-size", "16px")
-    .text("How similar these images are to your uploaded image");
+    .text("Top User Preference Dimensions");
+
+  // Explanatory paragraph
+  container.append("p")
+    .attr("class", "user-vector-description")
+    .style("max-width", "500px")
+    .style("margin", "0.5rem auto")
+    .style("text-align", "center")
+    .style("font-size", "14px")
+    .style("color", "#555")
+    .text("This chart shows the top 10 dimensions in your preference profile based on the images you've rated. Each bar represents how strongly you favor a certain visual feature, extracted from deep image embeddings. The higher the value, the more influence that feature has on your future recommendations.");
+
+  // Y-axis label
+  svg.append("text")
+    .attr("transform", `rotate(-90)`)
+    .attr("y", margin.left / 3)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .style("font-size", "12px")
+    .text("Preference Weight");
+
+  // X-axis label
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", height - 10)
+    .attr("text-anchor", "middle")
+    .style("font-size", "12px")
+    .text("Embedding Dimension Index");
 }
