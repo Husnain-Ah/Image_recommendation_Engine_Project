@@ -18,7 +18,7 @@ let numRatings = 0;
 
 let model: mobilenet.MobileNet | null = null
 
-async function initializeBackend() {
+async function initializeBackend() { // Initialize TensorFlow.js backend
   try {
     await tf.setBackend("webgl")
     await tf.ready()
@@ -29,12 +29,12 @@ async function initializeBackend() {
   }
 }
 
-async function loadModel() {
+async function loadModel() { // Load MobileNetV2 model
   console.log("Loading MobileNetV2 model...")
   loadingDiv.style.display = "block"
 
   try {
-    model = await mobilenet.load({ version: 2, alpha: 1.0 }); //  MobileNetV2 too match annoy feature extraction
+    model = await mobilenet.load({ version: 2, alpha: 1.0 }); //  MobileNetV2 to match annoy feature extraction
     console.log("Model loaded successfully.")
     resultsDiv.innerText = "Model loaded. Ready for image selection."
   } catch (error) {
@@ -45,7 +45,7 @@ async function loadModel() {
   }
 }
 
-async function handleImageUpload(event: Event) {
+async function handleImageUpload(event: Event) { // Handle image upload and processing with MobileNet
   const target = event.target as HTMLInputElement
   if (!target.files || target.files.length === 0) {
     console.log("No file selected.")
@@ -121,7 +121,7 @@ async function handleImageUpload(event: Event) {
   }
 }
 
-function displayResults(predictions: any) {
+function displayResults(predictions: any) { // Display classification results 
   if (!predictions || predictions.length === 0) {
     resultsDiv.innerText = "No classification results."
     return
@@ -151,7 +151,7 @@ async function loadMetadata() {
   }
 }
 
-function getKeywordScore(labelA: string, labelB: string): number {
+function getKeywordScore(labelA: string, labelB: string): number { // Calculate keyword score based on shared words
   if (!labelA || !labelB) return 0;
   const aWords = labelA.split(/[ ,]+/);
   const bWords = labelB.split(/[ ,]+/);
@@ -159,7 +159,7 @@ function getKeywordScore(labelA: string, labelB: string): number {
   return shared.length > 0 ? 1 : 0;
 }
 
-async function displayImageResults(imageUrls: string[]) {
+async function displayImageResults(imageUrls: string[]) { // Display related images in the gallery
   imageGallery.innerHTML = "";
 
   const spinner = document.getElementById("search-loading")!;
@@ -197,6 +197,8 @@ async function displayImageResults(imageUrls: string[]) {
       let score = 0;
 
       if (userPreferenceVector && currentImageEmbedding) {
+
+        // Use both user preference and current image embedding
         // Hybrid scoring: combine user preferences and content-similarity, this is 70%user preference and 30% current image, user preference matters more
         const similarityWithPreference = getCosineSimilarity(embedding, userPreferenceVector);
         const similarityWithCurrentImage = getCosineSimilarity(embedding, currentImageEmbedding);
@@ -204,9 +206,11 @@ async function displayImageResults(imageUrls: string[]) {
         // Weighted hybrid score (tweak weights as needed), 
         score = 0.7 * similarityWithPreference + 0.3 * similarityWithCurrentImage;
       } else if (userPreferenceVector) {
+
         // Use only user preference, 
         score = getCosineSimilarity(embedding, userPreferenceVector);
       } else if (currentImageEmbedding) {
+
         // Use only current image embedding, mainly used at start when there is no user preference determined by rating
         score = getCosineSimilarity(embedding, currentImageEmbedding);
       } else {
@@ -216,10 +220,11 @@ async function displayImageResults(imageUrls: string[]) {
 
 
       const labelB = metadata[filename]?.label ?? "";
-      const keywordScore = getKeywordScore(uploadedLabel, labelB);
+      const keywordScore = getKeywordScore(uploadedLabel, labelB); // Calculate keyword score to use in final score
+
       // Contextual boost: if the uploaded label is present in the metadata label, add a small boost to the score
       const contextualBoost = uploadedLabel && labelB.includes(uploadedLabel) ? 0.1 : 0;
-      const finalScore = 0.8 * score + 0.2 * keywordScore + contextualBoost;
+      const finalScore = 0.8 * score + 0.2 * keywordScore + contextualBoost; //will be used for force graph
 
       imageScores.push({ url, score: finalScore });
     } catch (err) {
@@ -229,26 +234,32 @@ async function displayImageResults(imageUrls: string[]) {
 
   spinner.style.display = "none";
 
+  // top k filtering gives top 6 images after filtering by similarity threshold
+  const k = 6 // Number of top images to display
+  const MAX_PER_LABEL = 15 // Maximum images per label to show in force graph
+  const labelGroups: Record<string, typeof imageScores> = {};
+  
   //low original thresholds, dynamicallly increases with ratings to get better recommendations
-  // 0.1 + 0.05 * numRatings, max 0.6, so at start it is 0.1 and increases to 0.6 with 10 ratings
   const SIMILARITY_THRESHOLD = Math.min(0.1 + 0.05 * numRatings, 0.6); 
 
-  // top k filtering gives top 5 images after filtering by similarity threshold
-  const k = 6 // Number of top images to display
-  const MAX_PER_LABEL = 15
-  const labelGroups: Record<string, typeof imageScores> = {};
+  // Filter images by similarity threshold first
+  const filteredImageScores = imageScores
+    .filter(img => img.score >= SIMILARITY_THRESHOLD)
+    .sort((a, b) => b.score - a.score);
 
-  for (let img of imageScores.sort((a, b) => b.score - a.score)) {
+
+    for (let img of filteredImageScores) { 
     const filename = img.url.split("/").pop()!;
     const label = metadata[filename]?.label ?? "Unknown";
 
     if (!labelGroups[label]) labelGroups[label] = [];
     if (labelGroups[label].length < MAX_PER_LABEL) {
       labelGroups[label].push(img);
-    }
-  }
+}
+}
+
   
-  const topImages = Object.values(labelGroups).flat().slice(0, k); // total top-5 to recommend
+  const topImages = Object.values(labelGroups).flat().slice(0, k); // to show in image gallery
   const forceImages = Object.values(labelGroups).flat().slice(0, MAX_PER_LABEL); // to show in force graph
 
   for (const { url, score } of topImages) {
@@ -269,14 +280,14 @@ async function displayImageResults(imageUrls: string[]) {
   renderForceGraph(imageDisplay.src, forceImages);
 }
 
-function showRatingSection() {
+function showRatingSection() { // Show the rating section after image processing
   const ratingSection = document.getElementById('rating-section');
   if (ratingSection) {
     ratingSection.style.display = 'block';
   }
 }
 
-document.getElementById('submit-rating')!.addEventListener('click', async () => {
+document.getElementById('submit-rating')!.addEventListener('click', async () => { // Submit rating button
   const rating = parseInt((document.getElementById('rating-input') as HTMLInputElement).value);
 
   if (rating >= 1 && rating <= 10) {
@@ -306,7 +317,7 @@ document.getElementById('submit-rating')!.addEventListener('click', async () => 
   }
 });
 
-document.getElementById("reset-preferences")!.addEventListener("click", () => {
+document.getElementById("reset-preferences")!.addEventListener("click", () => { // Reset user preferences button
   if (userPreferenceVector) {
     userPreferenceVector.dispose();
     userPreferenceVector = null;
@@ -324,7 +335,7 @@ initializeBackend().then(() => {
   imageInput.addEventListener("change", handleImageUpload)
 })
 
-async function checkServerStatus() {
+async function checkServerStatus() { // Check if the server is running
   const statusDiv = document.getElementById("server-status")
   if (!statusDiv) return
 

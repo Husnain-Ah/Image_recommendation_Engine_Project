@@ -19,7 +19,7 @@ type BarChartData = {
   value: number;
 };
 
-
+/// Function to render the force-directed graph to show the 15 most similar images to the uploaded image
 export function renderForceGraph(uploadedImageUrl: string, topImages: { url: string; score: number }[]) {
   const container = d3.select("#force-graph");
   container.selectAll("*").remove(); 
@@ -133,6 +133,8 @@ export function renderForceGraph(uploadedImageUrl: string, topImages: { url: str
   }
 }
 
+// Function to render the user vector chart to show the top 10 dimensions in the user preference profile
+// based on the images the user has rated. Each bar represents how strongly the user favors a certain visual feature
 export function renderUserVectorChart(userVector: tf.Tensor) {
   const container = d3.select("#user-vector-chart");
   container.selectAll("*").remove();

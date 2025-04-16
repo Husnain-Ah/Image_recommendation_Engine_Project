@@ -2,9 +2,10 @@ from flask import Flask, request, jsonify
 from sentence_transformers import SentenceTransformer
 
 app = Flask(__name__)
-model = SentenceTransformer('all-MiniLM-L6-v2') 
+model = SentenceTransformer('all-MiniLM-L6-v2') #this model is used for semantic searching to get the meaning behind the highest predicted
+#keyword and finding the closest match in the dataset.
 
-@app.route('/embed', methods=['POST'])
+@app.route('/embed', methods=['POST']) # Endpoint for embedding text
 def embed():
     data = request.json
     if not data or 'text' not in data:

@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 
-export function getCosineSimilarity(tensorA: tf.Tensor, tensorB: tf.Tensor): number {
+export function getCosineSimilarity(tensorA: tf.Tensor, tensorB: tf.Tensor): number { // Calculate cosine similarity between two vectors
   const dotProduct = tf.sum(tf.mul(tensorA, tensorB));
   const normA = tf.norm(tensorA);
   const normB = tf.norm(tensorB);

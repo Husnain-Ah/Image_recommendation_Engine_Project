@@ -5,7 +5,7 @@ const path = require('path');
 const fuzz = require('fuzzball');
 const axios = require('axios'); 
 
-async function getSemanticEmbedding(text) {
+async function getSemanticEmbedding(text) { // This function sends a request to the embedding service
   try {
     const response = await axios.post('http://localhost:5001/embed', { text });
     return response.data.embedding;
@@ -21,9 +21,9 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-app.use('/tiny-imagenet-200', express.static(path.join(__dirname, 'tiny-imagenet-200')));
+app.use('/tiny-imagenet-200', express.static(path.join(__dirname, 'tiny-imagenet-200'))); // the tiny-imagenet-200 directory
 
-app.use('/annoy_data', express.static('annoy_data')); // Serve the annoy_data directory this is so i can access the metadata.json file in frontend
+app.use('/annoy_data', express.static('annoy_data')); // the annoy_data directory this is so i can access the metadata.json file in frontend
 
 app.get('/test', (req, res) => {
   res.status(200).send('Server is up and running!');
@@ -41,7 +41,7 @@ let invertedIndex = {};
 
 
 
-function loadLabelMap() {
+function loadLabelMap() { // Load the label map from words.txt
   const filePath = path.join(DATASET_PATH, 'words.txt');
   const lines = fs.readFileSync(filePath, 'utf-8').trim().split('\n');
   for (const line of lines) {
@@ -52,7 +52,7 @@ function loadLabelMap() {
 }
 
 
-function loadMetadataAndBuildInvertedIndex() {
+function loadMetadataAndBuildInvertedIndex() { // Load metadata and build inverted index
   const metadataPath = path.join(__dirname, 'annoy_data', 'metadata.json');  // Update path as needed
   if (!fs.existsSync(metadataPath)) {
     console.error('metadata.json not found.');
@@ -74,7 +74,7 @@ function loadMetadataAndBuildInvertedIndex() {
 }
 
 
-function loadImages() {
+function loadImages() { // Load images from the dataset and create an index
   const wnids = fs.readFileSync(path.join(DATASET_PATH, 'wnids.txt'), 'utf-8').trim().split('\n');
   let total = 0;
 
@@ -104,14 +104,14 @@ function loadImages() {
   console.log(`Total images indexed: ${total}`);
 }
 
-const cosineSimilarity = (vecA, vecB) => {
+const cosineSimilarity = (vecA, vecB) => { // Calculate cosine similarity between two vectors
   const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
   const normA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
   const normB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
   return dotProduct / (normA * normB);
 };
 
-app.post('/search-images', async (req, res) => {
+app.post('/search-images', async (req, res) => { // Endpoint to search for images based on a keyword
   const { keyword } = req.body;
   if (!keyword) return res.status(400).json({ error: 'No keyword provided' });
 
