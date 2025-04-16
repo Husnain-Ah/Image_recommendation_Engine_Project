@@ -8,7 +8,7 @@ The general image dataset used can be found here : ``` https://cs231n.stanford.e
 
 Please download and extract this dataset into the `tiny-imagenet-200` folder within the project root, as shown in the directory structure below.
 
-## Setup
+## How to train the model for the current dataset (can be switched out for another one in the future)
 
 1.  **Extract Image Features:**
 
