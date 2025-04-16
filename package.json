@@ -2,8 +2,8 @@
   "name": "image-recognition-engine-project",
   "version": "1.0.0",
   "scripts": {
-    "start": "parcel index.html --port 8080",
-    "build": "parcel build index.html",
+    "start": "parcel src/index.html --port 8080",
+    "build": "parcel build src/index.html",
     "server": "node server.js"
   },
   "dependencies": {
