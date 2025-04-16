@@ -14,6 +14,7 @@ const imageGallery = document.getElementById("image-gallery")!
 let userPreferenceVector: tf.Tensor | null = null;
 let currentImageEmbedding: tf.Tensor | null = null;
 let predictions: any[] = [];
+let numRatings = 0;
 
 let model: mobilenet.MobileNet | null = null
 
@@ -216,7 +217,9 @@ async function displayImageResults(imageUrls: string[]) {
 
       const labelB = metadata[filename]?.label ?? "";
       const keywordScore = getKeywordScore(uploadedLabel, labelB);
-      const finalScore = 0.8 * score + 0.2 * keywordScore;
+      // Contextual boost: if the uploaded label is present in the metadata label, add a small boost to the score
+      const contextualBoost = uploadedLabel && labelB.includes(uploadedLabel) ? 0.1 : 0;
+      const finalScore = 0.8 * score + 0.2 * keywordScore + contextualBoost;
 
       imageScores.push({ url, score: finalScore });
     } catch (err) {
@@ -226,7 +229,9 @@ async function displayImageResults(imageUrls: string[]) {
 
   spinner.style.display = "none";
 
-  const SIMILARITY_THRESHOLD = 0.1; //lower threshold to get more images, increase later to get more strict image filtering
+  //low original thresholds, dynamicallly increases with ratings to get better recommendations
+  // 0.1 + 0.05 * numRatings, max 0.6, so at start it is 0.1 and increases to 0.6 with 10 ratings
+  const SIMILARITY_THRESHOLD = Math.min(0.1 + 0.05 * numRatings, 0.6); 
 
   // top k filtering gives top 5 images after filtering by similarity threshold
   const k = 6 // Number of top images to display
@@ -277,6 +282,7 @@ document.getElementById('submit-rating')!.addEventListener('click', async () => 
 
   if (rating >= 1 && rating <= 10) {
     console.log('User rating:', rating);
+    numRatings++;
 
     if (currentImageEmbedding) {
       const weight = rating / 10;
@@ -302,6 +308,7 @@ document.getElementById("reset-preferences")!.addEventListener("click", () => {
     userPreferenceVector.dispose();
     userPreferenceVector = null;
   }
+  numRatings = 0; //recet rating counter for dynamic threshold as well
   alert("User preference vector has been reset.");
 });
 
