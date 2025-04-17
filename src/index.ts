@@ -106,7 +106,7 @@ function displayResults(predictions: any) { // Display classification results
     return
   }
 
-  let resultText = "Predictions:<br><ul>";
+  let resultText = "Predictions:<br><ul>"; //spaghetti code, but works for now to make text appear on image analysis
   predictions.forEach((prediction: { className: string; probability: number }) => {
     resultText += `<li><span class="prediction-label">${prediction.className}</span><span class="prediction-value">${(prediction.probability * 100).toFixed(2)}%</span></li>`;
   });
@@ -137,6 +137,7 @@ function loadPromise(img: HTMLImageElement): Promise<HTMLImageElement> {
 
 function displayTopImages(topImages: { url: string; score: number }[]) {
   for (const { url, score } of topImages) {
+
     const img = document.createElement("img");
     img.src = `${BASE_URL}/${url}`;
     img.alt = `Score: ${score.toFixed(2)}`;
@@ -144,8 +145,11 @@ function displayTopImages(topImages: { url: string; score: number }[]) {
       console.error("Failed to load image:", img.src);
       img.style.display = "none";
     };
+
     imageGallery.appendChild(img);
+
   }
+
   imageGallery.style.display = "block";
   console.log("Final filtered image URLs:", topImages.map(i => i.url));
 }
@@ -252,7 +256,7 @@ document.getElementById('submit-rating')!.addEventListener('click', async () => 
     }
     
 
-    alert('Thank you for your rating!');
+    alert('rating submitted');
   } else {
     alert('Please enter a rating between 1 and 10');
   }
@@ -264,14 +268,14 @@ document.getElementById("reset-preferences")!.addEventListener("click", () => { 
     userPreferenceVector = null;
   }
   numRatings = 0; //recet rating counter for dynamic threshold as well
-  alert("User preference vector has been reset.");
+  alert("User preferences have been reset. Please re-rate images to update preferences.");
 });
 
 
 initializeBackend().then(async () => {
   await loadModel();
   console.log("Model loaded and ready");
-  
+
   imageProcessor = new ImageProcessor(model, userPreferenceVector, currentImageEmbedding, metadata, numRatings);
   
   imageInput.addEventListener("change", (event) => handleImageUpload(event, imageProcessor));
@@ -292,7 +296,7 @@ async function checkServerStatus() { // Check if the server is running
     }
   } catch (error) {
     statusDiv.textContent =
-    "Server Status: Error - Cannot connect to server. Make sure it's running on http://localhost:3000 by running 'node server.js' in the terminal" 
+    "Server Status: Error - Cannot connect to server. Make sure it's running on http://localhost:3000 by running 'node server.js' in the terminal and refreshing the page." 
     statusDiv.className = "status-error"
     console.error("Server connection error:", error)
   }

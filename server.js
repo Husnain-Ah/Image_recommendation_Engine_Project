@@ -111,7 +111,10 @@ const cosineSimilarity = (vecA, vecB) => { // Calculate cosine similarity betwee
   return dotProduct / (normA * normB);
 };
 
-app.post('/search-images', async (req, res) => { // Endpoint to search for images based on a keyword
+//router for testing
+const router = express.Router();
+
+router.post('/search-images', async (req, res) => { // Endpoint to search for images based on a keyword
   const { keyword } = req.body;
   if (!keyword) return res.status(400).json({ error: 'No keyword provided' });
 
@@ -148,7 +151,7 @@ app.post('/search-images', async (req, res) => { // Endpoint to search for image
   res.json({ results, match: bestMatch, similarity: highestSim.toFixed(3) });
 });
 
-
+app.use('/', router);
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
@@ -156,3 +159,11 @@ app.listen(PORT, () => {
   loadImages();
   loadMetadataAndBuildInvertedIndex();
 });
+
+module.exports = {
+  app,
+  routes: router,
+  cosineSimilarity,
+  loadLabelMap,
+  loadMetadataAndBuildInvertedIndex
+};

@@ -76,3 +76,22 @@ Please download and extract this dataset into the `tiny-imagenet-200` folder wit
     Once all three servers are running, open your web browser and navigate to `http://localhost:8080`.
 
     Then you should be able to test the app and curate your own image recommendations.
+
+
+
+## How to run the tests
+
+    Run the following commands in the terminal
+
+1.  **Jest tests for node server and image processing code:**
+
+    ```
+        npm test
+    ```
+
+
+2.  **pytest tests for flask server (semantic matching):**
+
+    ```
+        pytest tests/test_semantic_server.py -v
+    ```

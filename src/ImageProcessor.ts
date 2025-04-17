@@ -12,7 +12,7 @@ export interface ImageScore {
   score: number;
 }
 
-export class ImageProcessor {
+export class ImageProcessor {//code moved here for testing purposes
   constructor(
     private model: mobilenet.MobileNet | null = null,
     private userPreferenceVector: tf.Tensor | null = null,
