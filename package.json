@@ -4,7 +4,10 @@
   "scripts": {
     "start": "parcel src/index.html --port 8080",
     "build": "parcel build src/index.html",
-    "server": "node server.js"
+    "server": "node server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@tensorflow-models/mobilenet": "^2.1.1",
@@ -24,12 +27,17 @@
     "@parcel/optimizer-terser": "^2.x",
     "@parcel/transformer-js": "^2.x",
     "@parcel/transformer-typescript-tsc": "^2.x",
+    "@testing-library/jest-dom": "^6.6.3",
     "@types/d3": "^7.4.3",
+    "@types/jest": "^29.5.14",
     "buffer": "^6.0.3",
+    "jest": "^29.7.0",
     "os-browserify": "^0.3.0",
     "parcel": "^2.x",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
+    "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.x"
   },
   "browserslist": [

@@ -1,9 +1,10 @@
 import * as tf from "@tensorflow/tfjs"
 import * as mobilenet from "@tensorflow-models/mobilenet"
+
 import { searchLocalImages } from "./imageSearch";
 import { renderUserVectorChart } from "./barsAndCharts";
 import { renderForceGraph } from "./barsAndCharts";
-import { getCosineSimilarity } from "./functions";
+import { ImageProcessor } from './ImageProcessor';
 
 const imageInput = document.getElementById("image-input")! as HTMLInputElement
 const imageDisplay = document.getElementById("image-display")! as HTMLImageElement
@@ -17,6 +18,7 @@ let predictions: any[] = [];
 let numRatings = 0;
 
 let model: mobilenet.MobileNet | null = null
+let imageProcessor: ImageProcessor;
 
 async function initializeBackend() { // Initialize TensorFlow.js backend
   try {
@@ -45,7 +47,10 @@ async function loadModel() { // Load MobileNetV2 model
   }
 }
 
-async function handleImageUpload(event: Event) { // Handle image upload and processing with MobileNet
+const BASE_URL = "http://localhost:3000";
+let metadata: Record<string, { label: string }> = {};
+
+async function handleImageUpload(event: Event, imageProcessor: ImageProcessor) { // Handle image upload and processing with MobileNet
   const target = event.target as HTMLInputElement
   if (!target.files || target.files.length === 0) {
     console.log("No file selected.")
@@ -76,49 +81,23 @@ async function handleImageUpload(event: Event) { // Handle image upload and proc
 
   imageDisplay.onload = async () => {
     try {
-      console.log("Processing image...")
-
-      if (!model) {
-        console.log("Loading model...")
-        model = await mobilenet.load()
-      }
-
-      const tensor = tf.browser.fromPixels(imageDisplay)
-      console.log("Image tensor shape:", tensor.shape)
-
-      if (tensor.shape[0] === 0 || tensor.shape[1] === 0) {
-        resultsDiv.innerText = "Invalid image dimensions."
-        loadingDiv.style.display = "none"
-        return
-      }
-
-      console.log("Classifying image...")
-      predictions = await model.classify(tensor)
-      console.log("Classification results:", predictions)
-      displayResults(predictions)
-
+      const tensor = tf.browser.fromPixels(imageDisplay);
+      const { predictions, embedding } = await imageProcessor.processImage(tensor);
+      currentImageEmbedding = embedding;
+      displayResults(predictions);
+      
       if (predictions && predictions.length > 0) {
-        const topPrediction = predictions[0].className.split(",")[0].trim()
-        console.log("Top prediction:", topPrediction)
-        console.log("Searching for images related to:", topPrediction)
-
-        const embeddingModel = model as any;
-        currentImageEmbedding = embeddingModel.infer(tensor, true) as tf.Tensor;
-
-
-        imageGallery.innerHTML = "<p>Searching for related images...</p>"
-
+        const topPrediction = predictions[0].className.split(",")[0].trim();
         const imageUrls = await searchLocalImages(topPrediction);
-        console.log("Received image URLs:", imageUrls)
-        displayImageResults(imageUrls)
+        await displayImageResults(imageUrls);
       }
     } catch (error) {
-      console.error("Error during classification:", error)
-      resultsDiv.innerText = "Error processing image: " + (error as Error).message
+      console.error("Error during classification:", error);
+      resultsDiv.innerText = "Error processing image: " + (error as Error).message;
     } finally {
-      loadingDiv.style.display = "none"
+      loadingDiv.style.display = "none";
     }
-  }
+  };
 }
 
 function displayResults(predictions: any) { // Display classification results 
@@ -136,9 +115,6 @@ function displayResults(predictions: any) { // Display classification results
   resultsDiv.style.display = "block";
 }
 
-const BASE_URL = "http://localhost:3000";
-let metadata: Record<string, { label: string }> = {};
-
 async function loadMetadata() {
   if (Object.keys(metadata).length === 0) {
     const res = await fetch(`${BASE_URL}/annoy_data/metadata.json`);
@@ -151,12 +127,27 @@ async function loadMetadata() {
   }
 }
 
-function getKeywordScore(labelA: string, labelB: string): number { // Calculate keyword score based on shared words
-  if (!labelA || !labelB) return 0;
-  const aWords = labelA.split(/[ ,]+/);
-  const bWords = labelB.split(/[ ,]+/);
-  const shared = aWords.filter(word => bWords.includes(word));
-  return shared.length > 0 ? 1 : 0;
+function loadPromise(img: HTMLImageElement): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+  });
+}
+
+
+function displayTopImages(topImages: { url: string; score: number }[]) {
+  for (const { url, score } of topImages) {
+    const img = document.createElement("img");
+    img.src = `${BASE_URL}/${url}`;
+    img.alt = `Score: ${score.toFixed(2)}`;
+    img.onerror = () => {
+      console.error("Failed to load image:", img.src);
+      img.style.display = "none";
+    };
+    imageGallery.appendChild(img);
+  }
+  imageGallery.style.display = "block";
+  console.log("Final filtered image URLs:", topImages.map(i => i.url));
 }
 
 async function displayImageResults(imageUrls: string[]) { // Display related images in the gallery
@@ -182,51 +173,15 @@ async function displayImageResults(imageUrls: string[]) { // Display related ima
     img.crossOrigin = "anonymous";
     img.src = `${BASE_URL}/${url}`;
 
-    const loadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
-    });
-
     try {
-      const loadedImg = await loadPromise;
+      const loadedImg = await loadPromise(img);
       const tensor = tf.browser.fromPixels(loadedImg);
-
       const embeddingModel = model as any;
       const embedding = embeddingModel.infer(tensor, true) as tf.Tensor;
 
-      let score = 0;
-
-      if (userPreferenceVector && currentImageEmbedding) {
-
-        // Use both user preference and current image embedding
-        // Hybrid scoring: combine user preferences and content-similarity, this is 70%user preference and 30% current image, user preference matters more
-        const similarityWithPreference = getCosineSimilarity(embedding, userPreferenceVector);
-        const similarityWithCurrentImage = getCosineSimilarity(embedding, currentImageEmbedding);
-
-        // Weighted hybrid score (tweak weights as needed), 
-        score = 0.7 * similarityWithPreference + 0.3 * similarityWithCurrentImage;
-      } else if (userPreferenceVector) {
-
-        // Use only user preference, 
-        score = getCosineSimilarity(embedding, userPreferenceVector);
-      } else if (currentImageEmbedding) {
-
-        // Use only current image embedding, mainly used at start when there is no user preference determined by rating
-        score = getCosineSimilarity(embedding, currentImageEmbedding);
-      } else {
-        // Fallback (shouldnt hit)
-        score = 0;
-      }
-
-
       const labelB = metadata[filename]?.label ?? "";
-      const keywordScore = getKeywordScore(uploadedLabel, labelB); // Calculate keyword score to use in final score
-
-      // Contextual boost: if the uploaded label is present in the metadata label, add a small boost to the score
-      const contextualBoost = uploadedLabel && labelB.includes(uploadedLabel) ? 0.1 : 0;
-      const finalScore = 0.8 * score + 0.2 * keywordScore + contextualBoost; //will be used for force graph
-
-      imageScores.push({ url, score: finalScore });
+      const score = imageProcessor.calculateImageScore(embedding, uploadedLabel, labelB);
+      imageScores.push({ url, score });
     } catch (err) {
       console.error(err);
     } 
@@ -235,47 +190,33 @@ async function displayImageResults(imageUrls: string[]) { // Display related ima
   spinner.style.display = "none";
 
   // top k filtering gives top 6 images after filtering by similarity threshold
-  const k = 6 // Number of top images to display
-  const MAX_PER_LABEL = 15 // Maximum images per label to show in force graph
+  const k = 6; // Number of top images to display
+  const MAX_PER_LABEL = 15; // Maximum images per label to show in force graph
   const labelGroups: Record<string, typeof imageScores> = {};
   
   //low original thresholds, dynamicallly increases with ratings to get better recommendations
-  const SIMILARITY_THRESHOLD = Math.min(0.1 + 0.05 * numRatings, 0.6); 
+  const SIMILARITY_THRESHOLD = imageProcessor.getSimilarityThreshold();
 
   // Filter images by similarity threshold first
   const filteredImageScores = imageScores
     .filter(img => img.score >= SIMILARITY_THRESHOLD)
     .sort((a, b) => b.score - a.score);
 
-
-    for (let img of filteredImageScores) { 
+  // Group by label
+  for (let img of filteredImageScores) { 
     const filename = img.url.split("/").pop()!;
     const label = metadata[filename]?.label ?? "Unknown";
 
     if (!labelGroups[label]) labelGroups[label] = [];
     if (labelGroups[label].length < MAX_PER_LABEL) {
       labelGroups[label].push(img);
-}
-}
-
-  
-  const topImages = Object.values(labelGroups).flat().slice(0, k); // to show in image gallery
-  const forceImages = Object.values(labelGroups).flat().slice(0, MAX_PER_LABEL); // to show in force graph
-
-  for (const { url, score } of topImages) {
-    const img = document.createElement("img");
-    img.src = `${BASE_URL}/${url}`;
-    img.alt = `Score: ${score.toFixed(2)}`;
-    img.onerror = () => {
-      console.error("Failed to load image:", img.src);
-      img.style.display = "none";
-    };
-    imageGallery.appendChild(img);
+    }
   }
 
-  imageGallery.style.display = "block";
-  console.log("Final filtered image URLs:", topImages.map(i => i.url));
+  const topImages = Object.values(labelGroups).flat().slice(0, k);
+  const forceImages = Object.values(labelGroups).flat().slice(0, MAX_PER_LABEL);
 
+  displayTopImages(topImages);
   showRatingSection();
   renderForceGraph(imageDisplay.src, forceImages);
 }
@@ -327,13 +268,14 @@ document.getElementById("reset-preferences")!.addEventListener("click", () => { 
 });
 
 
-initializeBackend().then(() => {
-  loadModel().then(() => {
-    console.log("Model loaded and ready")
-  })
-
-  imageInput.addEventListener("change", handleImageUpload)
-})
+initializeBackend().then(async () => {
+  await loadModel();
+  console.log("Model loaded and ready");
+  
+  imageProcessor = new ImageProcessor(model, userPreferenceVector, currentImageEmbedding, metadata, numRatings);
+  
+  imageInput.addEventListener("change", (event) => handleImageUpload(event, imageProcessor));
+});
 
 async function checkServerStatus() { // Check if the server is running
   const statusDiv = document.getElementById("server-status")

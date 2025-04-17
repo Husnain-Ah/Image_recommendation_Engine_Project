@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ES2017", // Target modern JS
-    "module": "ESNext",  // Use modern modules
-    "outDir": "./dist", // Output directory for compiled JS (Parcel handles this mostly)
-    "rootDir": "./src", // Source directory
+    "target": "es6",
+    "module": "commonjs",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node", "@types/d3"], // Include Node and D3 types
-    "moduleResolution": "node" // Important for finding TFJS modules
+    "types": ["jest", "node"],
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "jsx": "react",
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*", "server.js"], // Only compile files in src
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
 }
