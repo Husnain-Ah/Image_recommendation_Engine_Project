@@ -38,9 +38,6 @@ let labelMap = {};
 let metadata = {};
 let invertedIndex = {};
 
-
-
-
 function loadLabelMap() { // Load the label map from words.txt
   const filePath = path.join(DATASET_PATH, 'words.txt');
   const lines = fs.readFileSync(filePath, 'utf-8').trim().split('\n');
@@ -50,7 +47,6 @@ function loadLabelMap() { // Load the label map from words.txt
   }
   console.log(`Loaded ${Object.keys(labelMap).length} labels`);
 }
-
 
 function loadMetadataAndBuildInvertedIndex() { // Load metadata and build inverted index
   const metadataPath = path.join(__dirname, 'annoy_data', 'metadata.json');  // Update path as needed
@@ -72,7 +68,6 @@ function loadMetadataAndBuildInvertedIndex() { // Load metadata and build invert
 
   console.log('Inverted index built with', Object.keys(invertedIndex).length, 'labels.');
 }
-
 
 function loadImages() { // Load images from the dataset and create an index
   const wnids = fs.readFileSync(path.join(DATASET_PATH, 'wnids.txt'), 'utf-8').trim().split('\n');
@@ -150,6 +145,35 @@ router.post('/search-images', async (req, res) => { // Endpoint to search for im
 
   res.json({ results, match: bestMatch, similarity: highestSim.toFixed(3) });
 });
+
+router.post('/consent', (req, res) => { //store user interaction data in json for research and creating diagrams in r studio
+  const { ratings } = req.body;
+
+  const pathToRatingFile = path.join(__dirname, 'user_ratings.json');
+
+  fs.readFile(pathToRatingFile, 'utf8', (err, data) => {
+      let storedRatings = [];
+      if (!err && data) {
+          try {
+              storedRatings = JSON.parse(data);
+          } catch (e) {
+              console.warn("Error parsing JSON: ");
+          }
+      }
+
+      storedRatings.push(...ratings);
+
+      fs.writeFile(pathToRatingFile, JSON.stringify(storedRatings, null, 2), err => {
+          if (err) {
+              console.error('Failed to write ratings:', err);
+              return res.status(500).json({ error: 'Failed to store ratings' });
+          }
+          res.status(200).json({ message: 'Ratings stored successfully' });
+      });
+  });
+});
+
+
 
 app.use('/', router);
 

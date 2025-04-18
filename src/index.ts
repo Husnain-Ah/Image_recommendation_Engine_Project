@@ -16,6 +16,7 @@ let userPreferenceVector: tf.Tensor | null = null;
 let currentImageEmbedding: tf.Tensor | null = null;
 let predictions: any[] = [];
 let numRatings = 0;
+let ratingsData: any[] = [];
 
 let model: mobilenet.MobileNet | null = null
 let imageProcessor: ImageProcessor;
@@ -234,31 +235,39 @@ function showRatingSection() { // Show the rating section after image processing
 
 document.getElementById('submit-rating')!.addEventListener('click', async () => { // Submit rating button
   const rating = parseInt((document.getElementById('rating-input') as HTMLInputElement).value);
-
+  
   if (rating >= 1 && rating <= 10) {
-    console.log('User rating:', rating);
-    numRatings++;
+      console.log('User rating:', rating);
+      numRatings++;
 
-    if (currentImageEmbedding) {
-      const weight = rating / 10;
-      const scaledEmbedding = currentImageEmbedding.mul(tf.scalar(weight));
+      if (currentImageEmbedding) {
+          const weight = rating / 10;
+          const scaledEmbedding = currentImageEmbedding.mul(tf.scalar(weight));
 
+          if (userPreferenceVector) {
+              userPreferenceVector = tf.add(userPreferenceVector, scaledEmbedding);
+          } else {
+              userPreferenceVector = scaledEmbedding.clone();
+          }
+
+          console.log("Updated user preference vector:", userPreferenceVector.arraySync());
+      }
       if (userPreferenceVector) {
-        userPreferenceVector = tf.add(userPreferenceVector, scaledEmbedding);
-      } else {
-        userPreferenceVector = scaledEmbedding.clone();
+          renderUserVectorChart(userPreferenceVector);
       }
 
-      console.log("Updated user preference vector:", userPreferenceVector.arraySync());
-    }
-    if (userPreferenceVector) {
-      renderUserVectorChart(userPreferenceVector);
-    }
+    const feedbackEntry = {
+      relevant: rating >= 6 ? 1 : 0,     
+      user_rating: rating,
+      timestamp: new Date().toISOString()
+    };
     
 
-    alert('rating submitted');
+    ratingsData.push(feedbackEntry);
+
+      alert('Rating submitted');
   } else {
-    alert('Please enter a rating between 1 and 10');
+      alert('Please enter a rating between 1 and 10');
   }
 });
 
@@ -301,6 +310,35 @@ async function checkServerStatus() { // Check if the server is running
     console.error("Server connection error:", error)
   }
 }
+
+
+document.getElementById('consent-button')!.addEventListener('click', async () => { // Consent button to send ratings data to the server
+  const consent = confirm("Do you consent to store the ratings data for research purposes?");
+  
+  if (consent) {
+      try {
+          const response = await fetch('http://localhost:3000/consent', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ratings: ratingsData })
+          });
+
+          if (response.ok) {
+              console.log("Ratings data stored successfully!");
+              ratingsData = [];
+          } else {
+              console.error("Failed to store ratings data");
+          }
+      } catch (error) {
+          console.error("Error sending ratings data:", error);
+      }
+  } else {
+      // clear the ratings data when no consent was given
+      console.log("Ratings data discarded.");
+      ratingsData = [];  
+  }
+});
+
 
 document.addEventListener("DOMContentLoaded", checkServerStatus)
 

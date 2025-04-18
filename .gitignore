@@ -4,3 +4,4 @@
 node_modules
 tiny-imagenet-200/*
 annoy-env/*
+user_ratings.json
