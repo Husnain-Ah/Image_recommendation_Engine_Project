@@ -32,6 +32,7 @@ app.get('/test', (req, res) => {
 const DATASET_PATH = path.join(__dirname, 'tiny-imagenet-200');
 const TRAIN_IMAGES_PATH = path.join(DATASET_PATH, 'train');
 const VAL_IMAGES_PATH = path.join(DATASET_PATH, 'val', 'images');
+const RATING_FILE_PATH = path.join(__dirname, 'user_ratings.json');
 
 let imageIndex = []; 
 let labelMap = {};   
@@ -149,31 +150,29 @@ router.post('/search-images', async (req, res) => { // Endpoint to search for im
 router.post('/consent', (req, res) => { //store user interaction data in json for research and creating diagrams in r studio
   const { ratings } = req.body;
 
-  const pathToRatingFile = path.join(__dirname, 'user_ratings.json');
+  if (!ratings || !Array.isArray(ratings)) {
+    return res.status(400).json({ error: 'Invalid ratings data' });
+  }
 
-  fs.readFile(pathToRatingFile, 'utf8', (err, data) => {
-      let storedRatings = [];
-      if (!err && data) {
-          try {
-              storedRatings = JSON.parse(data);
-          } catch (e) {
-              console.warn("Error parsing JSON: ");
-          }
+  try {
+    let existingRatings = [];
+    if (fs.existsSync(RATING_FILE_PATH)) {
+      const fileContent = fs.readFileSync(RATING_FILE_PATH, 'utf-8');
+      try {
+        existingRatings = JSON.parse(fileContent);
+      } catch (err) {
+        return res.status(400).json({ error: 'Invalid JSON in existing ratings file' });
       }
+    }
 
-      storedRatings.push(...ratings);
+    const updatedRatings = [...existingRatings, ...ratings];
+    fs.writeFileSync(RATING_FILE_PATH, JSON.stringify(updatedRatings, null, 2));
 
-      fs.writeFile(pathToRatingFile, JSON.stringify(storedRatings, null, 2), err => {
-          if (err) {
-              console.error('Failed to write ratings:', err);
-              return res.status(500).json({ error: 'Failed to store ratings' });
-          }
-          res.status(200).json({ message: 'Ratings stored successfully' });
-      });
-  });
+    res.status(200).json({ message: 'Ratings stored successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to store ratings' });
+  }
 });
-
-
 
 app.use('/', router);
 

@@ -40,7 +40,6 @@ jest.mock('@tensorflow/tfjs', () => ({
   }
 }));
 
-// Mock MobileNet
 jest.mock('@tensorflow-models/mobilenet', () => ({
   load: jest.fn().mockResolvedValue({
     classify: jest.fn().mockResolvedValue([
