@@ -10,8 +10,17 @@ async function getSemanticEmbedding(text) { // This function sends a request to 
     const response = await axios.post('http://localhost:5001/embed', { text });
     return response.data.embedding;
   } catch (err) {
-    console.error('Embedding error:', err.message);
-    return null;
+    
+    try {
+      if (!response || !response.data || !response.data.embedding) {
+          throw new Error("Invalid response format");
+      }
+      return response.data.embedding;
+    } catch (err) {
+        console.error('Embedding error:', err.message);
+        return null;
+    }
+
   }
 }
 
