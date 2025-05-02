@@ -6,7 +6,7 @@ Created By : Husnain Ahmed
 
 Student ID Number : 21308666
 
-The github repository for this prohect can be found here : https://github.com/Husnain-Ah/Image_recommendation_Engine_Project
+The github repository for this project can be found here : https://github.com/Husnain-Ah/Image_recommendation_Engine_Project
 
 ## Dataset
 
