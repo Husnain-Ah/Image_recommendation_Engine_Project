@@ -2,6 +2,10 @@
 
 This project implements an image recommendation engine that uses TensorFlow.js, MobileNet, and Annoy for efficient image retrieval based on user preferences.
 
+Created By : Husnain Ahmed
+
+Student ID Number : 21308666
+
 ## Dataset
 
 The general image dataset used can be found here : ``` https://cs231n.stanford.edu/tiny-imagenet-200.zip ```
