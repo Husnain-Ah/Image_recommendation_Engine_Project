@@ -6,6 +6,8 @@ Created By : Husnain Ahmed
 
 Student ID Number : 21308666
 
+The github repository for this prohect can be found here : https://github.com/Husnain-Ah/Image_recommendation_Engine_Project
+
 ## Dataset
 
 The general image dataset used can be found here : ``` https://cs231n.stanford.edu/tiny-imagenet-200.zip ```
