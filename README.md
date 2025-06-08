@@ -6,6 +6,8 @@ Created By : Husnain Ahmed
 
 Student ID Number : 21308666
 
+Video showcase : https://mmutube.mmu.ac.uk/media/Husnain%20Ahmed%2021308666%20synoptic%20project%20showcase/1_8oaw88fu
+
 The github repository for this project can be found here : https://github.com/Husnain-Ah/Image_recommendation_Engine_Project
 
 ## Dataset
